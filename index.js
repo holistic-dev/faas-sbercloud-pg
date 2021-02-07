@@ -1,7 +1,7 @@
-const axios = require ('axios');
-const { Client } = require('pg');
+const axios = require("axios");
+const { Client } = require("pg");
 
-const holisticdev_api_url = 'https://api.holistic.dev/api/v1';
+const holisticdev_api_url = "https://api.holistic.dev/api/v1";
 const api_key = process.env.HOLISTICDEV_API_KEY;
 const connectionString = process.env.PG_CONNECTION_STRING;
 const project_name = process.env.HOLISTICDEV_PROJECT_NAME;
@@ -31,44 +31,55 @@ FROM (
 ) u
 `;
 
-exports.handler = async function (event, context) {
-  try{
-    const client = new Client({
-      connectionString,
-    });
-    
-    client.connect();
+const executeQuery = async (connectionString, sqlQuery) => {
+  const client = new Client({
+    connectionString,
+  });
 
+  client.connect();
+
+  return new Promise((resolve, reject) => {
     client.query(sql, [], (err, res) => {
-      if(err == null  && res.rows[0] != null){
+      if (err == null && res.rows[0] != null) {
         const data = {
           project: {
-            name: project_name
+            name: project_name,
           },
-          pgss: Buffer.from(JSON.stringify(res.rows[0].json_agg)).toString('base64'),
+          pgss: Buffer.from(JSON.stringify(res.rows[0].json_agg)).toString(
+            "base64"
+          ),
         };
 
         axios({
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': api_key,
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
           },
           data,
           url: `${holisticdev_api_url}/pg_stat_statements`,
-        }).then((response) => {
-          console.log(response.data);
         })
-        .catch(function (error) {
-          console.error('api.holistic.dev error:');
-          console.error(JSON.stringify(error.response.data, null, 2));
-        });
+          .then((response) => {
+            resolve(response.data);
+          })
+          .catch(function (error) {
+            client.end();
+            reject(new Error(JSON.stringify(error.response.data)));
+          });
         return;
       }
       client.end();
-      console.error('db query error:', err.message);
+      reject(new Error(err.message));
     });
-  }catch(error){
-    console.error('core error: ', error.message)
+  });
+};
+
+exports.handler = async function (event, context) {
+  try {
+    const result = await executeQuery(connectionString, sql);
+    console.log(result);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
   }
 };

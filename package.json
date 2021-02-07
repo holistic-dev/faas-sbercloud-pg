@@ -1,6 +1,6 @@
 {
   "name": "@holistic.dev/faas-sbercloud-pg",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "index.js",
   "author": {
     "name": "Anton Revyako",
@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/holistic-dev/faas-sbercloud-pg#readme",
   "dependencies": {
-    "axios": "^0.21.0",
+    "axios": "^0.21.1",
     "pg": "^8.5.1"
   }
 }
